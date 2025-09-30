@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Billing & Revenue Tool</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState } = React;
+        const { Upload, Plus, Trash2, Edit2, Save, X, DollarSign, FileText, Users } = lucide;
+
+        const BillingTool = () => {
+          const [customers, setCustomers] = useState([]);
+          const [billingCodes, setBillingCodes] = useState([]);
+          const [customerPricing, setCustomerPricing] = useState({});
+          const [transactions, setTransactions] = useState([]);
+          const [activeTab, setActiveTab] = useState('customers');
+          const [newCustomerName, setNewCustomerName] = useState('');
+          const [newCode, setNewCode] = useState({ code: '', description: '', defaultPrice: '' });
+
+          const addCustomer = () => {
+            if (newCustomerName.trim()) {
+              const newCustomer = {
+                id: Date.now(),
+                name: newCustomerName.trim()
+              };
+              setCustomers([...customers, newCustomer]);
+              setCustomerPricing({ ...customerPricing, [newCustomer.id]: {} });
+              setNewCustomerName('');
+            }
+          };
+
+          const deleteCustomer = (customerId) => {
+            setCustomers(customers.filter(c => c.id !== customerId));
+            const newPricing = { ...customerPricing };
+            delete newPricing[customerId];
+            setCustomerPricing(newPricing);
+          };
+
+          const addBillingCode = () => {
+            if (newCode.code.trim()) {
+              const code = {
+                id: Date.now(),
+                code: newCode.code.trim().toUpperCase(),
+                description: newCode.description.trim(),
+                defaultPrice: parseFloat(newCode.defaultPrice) || 0
+              };
+              setBillingCodes([...billingCodes, code]);
+              
+              const updatedPricing = { ...customerPricing };
+              customers.forEach(customer => {
+                if (!updatedPricing[customer.id]) {
+                  updatedPricing[customer.id] = {};
+                }
+                updatedPricing[customer.id][code.code] = code.defaultPrice;
+              });
+              setCustomerPricing(updatedPricing);
+              
+              setNewCode({ code: '', description: '', defaultPrice: '' });
+            }
+          };
+
+          const deleteBillingCode = (codeId) => {
+            const codeToDelete = billingCodes.find(c => c.id === codeId);
+            setBillingCodes(billingCodes.filter(c => c.id !== codeId));
+            
+            const updatedPricing = { ...customerPricing };
+            Object.keys(updatedPricing).forEach(customerId => {
+              delete updatedPricing[customerId][codeToDelete.code];
+            });
+            setCustomerPricing(updatedPricing);
+          };
+
+          const importBillingCodes = (e) => {
+            const file = e.target.files[0];
+            if (file) {
+              const reader = new FileReader();
+              reader.onload = (event) => {
+                const text = event.target.result;
+                const lines = text.split('\n').filter(line => line.trim());
+                const newCodes = [];
+                
+                const startIndex = lines[0].toLowerCase().includes('code') ? 1 : 0;
+                
+                for (let i = startIndex; i < lines.length; i++) {
+                  const [code, description, defaultPrice] = lines[i].split(',').map(s => s.trim());
+                  if (code) {
+                    newCodes.push({
+                      id: Date.now() + i,
+                      code: code.toUpperCase(),
+                      description: description || '',
+                      defaultPrice: parseFloat(defaultPrice) || 0
+                    });
+                  }
+                }
+                
+                setBillingCodes([...billingCodes, ...newCodes]);
+                
+                const updatedPricing = { ...customerPricing };
+                customers.forEach(customer => {
+                  if (!updatedPricing[customer.id]) {
+                    updatedPricing[customer.id] = {};
+                  }
+                  newCodes.forEach(code => {
+                    updatedPricing[customer.id][code.code] = code.defaultPrice;
+                  });
+                });
+                setCustomerPricing(updatedPricing);
+              };
+              reader.readAsText(file);
+            }
+            e.target.value = '';
+          };
+
+          const updateCustomerPrice = (customerId, code, price) => {
+            const updatedPricing = { ...customerPricing };
+            if (!updatedPricing[customerId]) {
+              updatedPricing[customerId] = {};
+            }
+            updatedPricing[customerId][code] = parseFloat(price) || 0;
+            setCustomerPricing(updatedPricing);
+          };
+
+          const importTransactions = (e) => {
+            const file = e.target.files[0];
+            if (file) {
+              const reader = new FileReader();
+              reader.onload = (event) => {
+                const text = event.target.result;
+                const lines = text.split('\n').filter(line => line.trim());
+                const newTransactions = [];
+                
+                const startIndex = lines[0].toLowerCase().includes('customer') ? 1 : 0;
+                
+                for (let i = startIndex; i < lines.length; i++) {
+                  const [customerName, code, quantity, date] = lines[i].split(',').map(s => s.trim());
+                  if (customerName && code) {
+                    newTransactions.push({
+                      id: Date.now() + i,
+                      customerName,
+                      code: code.toUpperCase(),
+                      quantity: parseInt(quantity) || 1,
+                      date: date || new Date().toISOString().split('T')[0]
+                    });
+                  }
+                }
+                
+                setTransactions([...transactions, ...newTransactions]);
+              };
+              reader.readAsText(file);
+            }
+            e.target.value = '';
+          };
+
+          const calculateRevenue = () => {
+            const revenueByCustomer = {};
+            
+            transactions.forEach(transaction => {
+              const customer = customers.find(c => c.name.toLowerCase() === transaction.customerName.toLowerCase());
+              
+              if (customer && customerPricing[customer.id] && customerPricing[customer.id][transaction.code] !== undefined) {
+                const price = customerPricing[customer.id][transaction.code];
+                const revenue = price * transaction.quantity;
+                
+                if (!revenueByCustomer[customer.name]) {
+                  revenueByCustomer[customer.name] = {
+                    total: 0,
+                    details: []
+                  };
+                }
+                
+                revenueByCustomer[customer.name].total += revenue;
+                revenueByCustomer[customer.name].details.push({
+                  ...transaction,
+                  price,
+                  revenue
+                });
+              }
+            });
+            
+            return revenueByCustomer;
+          };
+
+          const revenueData = calculateRevenue();
+          const totalRevenue = Object.values(revenueData).reduce((sum, customer) => sum + customer.total, 0);
+
+          return (
+            <div className="min-h-screen bg-gray-50 p-6">
+              <div className="max-w-7xl mx-auto">
+                <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+                  <h1 className="text-3xl font-bold text-gray-900 mb-2">Billing & Revenue Tool</h1>
+                  <p className="text-gray-600">Manage customers, billing codes, and calculate revenue</p>
+                </div>
+
+                <div className="bg-white rounded-lg shadow-sm mb-6">
+                  <div className="border-b border-gray-200">
+                    <nav className="flex -mb-px">
+                      <button
+                        onClick={() => setActiveTab('customers')}
+                        className={`py-4 px-6 font-medium text-sm border-b-2 ${
+                          activeTab === 'customers'
+                            ? 'border-blue-500 text-blue-600'
+                            : 'border-transparent text-gray-500 hover:text-gray-700'
+                        }`}
+                      >
+                        Customers
+                      </button>
+                      <button
+                        onClick={() => setActiveTab('codes
