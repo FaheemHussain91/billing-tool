@@ -7,13 +7,14 @@
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body>
     <div id="root"></div>
     <script type="text/babel">
         const { useState } = React;
-        const { Upload, Plus, Trash2, Edit2, Save, X, DollarSign, FileText, Users } = lucide;
+        const { Upload, Plus, Trash2, DollarSign, FileText, Users } = lucide;
 
         const BillingTool = () => {
           const [customers, setCustomers] = useState([]);
@@ -26,10 +27,7 @@
 
           const addCustomer = () => {
             if (newCustomerName.trim()) {
-              const newCustomer = {
-                id: Date.now(),
-                name: newCustomerName.trim()
-              };
+              const newCustomer = { id: Date.now(), name: newCustomerName.trim() };
               setCustomers([...customers, newCustomer]);
               setCustomerPricing({ ...customerPricing, [newCustomer.id]: {} });
               setNewCustomerName('');
@@ -52,16 +50,12 @@
                 defaultPrice: parseFloat(newCode.defaultPrice) || 0
               };
               setBillingCodes([...billingCodes, code]);
-              
               const updatedPricing = { ...customerPricing };
               customers.forEach(customer => {
-                if (!updatedPricing[customer.id]) {
-                  updatedPricing[customer.id] = {};
-                }
+                if (!updatedPricing[customer.id]) updatedPricing[customer.id] = {};
                 updatedPricing[customer.id][code.code] = code.defaultPrice;
               });
               setCustomerPricing(updatedPricing);
-              
               setNewCode({ code: '', description: '', defaultPrice: '' });
             }
           };
@@ -69,7 +63,6 @@
           const deleteBillingCode = (codeId) => {
             const codeToDelete = billingCodes.find(c => c.id === codeId);
             setBillingCodes(billingCodes.filter(c => c.id !== codeId));
-            
             const updatedPricing = { ...customerPricing };
             Object.keys(updatedPricing).forEach(customerId => {
               delete updatedPricing[customerId][codeToDelete.code];
@@ -85,9 +78,7 @@
                 const text = event.target.result;
                 const lines = text.split('\n').filter(line => line.trim());
                 const newCodes = [];
-                
                 const startIndex = lines[0].toLowerCase().includes('code') ? 1 : 0;
-                
                 for (let i = startIndex; i < lines.length; i++) {
                   const [code, description, defaultPrice] = lines[i].split(',').map(s => s.trim());
                   if (code) {
@@ -99,14 +90,10 @@
                     });
                   }
                 }
-                
                 setBillingCodes([...billingCodes, ...newCodes]);
-                
                 const updatedPricing = { ...customerPricing };
                 customers.forEach(customer => {
-                  if (!updatedPricing[customer.id]) {
-                    updatedPricing[customer.id] = {};
-                  }
+                  if (!updatedPricing[customer.id]) updatedPricing[customer.id] = {};
                   newCodes.forEach(code => {
                     updatedPricing[customer.id][code.code] = code.defaultPrice;
                   });
@@ -120,9 +107,7 @@
 
           const updateCustomerPrice = (customerId, code, price) => {
             const updatedPricing = { ...customerPricing };
-            if (!updatedPricing[customerId]) {
-              updatedPricing[customerId] = {};
-            }
+            if (!updatedPricing[customerId]) updatedPricing[customerId] = {};
             updatedPricing[customerId][code] = parseFloat(price) || 0;
             setCustomerPricing(updatedPricing);
           };
@@ -135,9 +120,7 @@
                 const text = event.target.result;
                 const lines = text.split('\n').filter(line => line.trim());
                 const newTransactions = [];
-                
                 const startIndex = lines[0].toLowerCase().includes('customer') ? 1 : 0;
-                
                 for (let i = startIndex; i < lines.length; i++) {
                   const [customerName, code, quantity, date] = lines[i].split(',').map(s => s.trim());
                   if (customerName && code) {
@@ -150,7 +133,6 @@
                     });
                   }
                 }
-                
                 setTransactions([...transactions, ...newTransactions]);
               };
               reader.readAsText(file);
@@ -160,30 +142,18 @@
 
           const calculateRevenue = () => {
             const revenueByCustomer = {};
-            
             transactions.forEach(transaction => {
               const customer = customers.find(c => c.name.toLowerCase() === transaction.customerName.toLowerCase());
-              
               if (customer && customerPricing[customer.id] && customerPricing[customer.id][transaction.code] !== undefined) {
                 const price = customerPricing[customer.id][transaction.code];
                 const revenue = price * transaction.quantity;
-                
                 if (!revenueByCustomer[customer.name]) {
-                  revenueByCustomer[customer.name] = {
-                    total: 0,
-                    details: []
-                  };
+                  revenueByCustomer[customer.name] = { total: 0, details: [] };
                 }
-                
                 revenueByCustomer[customer.name].total += revenue;
-                revenueByCustomer[customer.name].details.push({
-                  ...transaction,
-                  price,
-                  revenue
-                });
+                revenueByCustomer[customer.name].details.push({ ...transaction, price, revenue });
               }
             });
-            
             return revenueByCustomer;
           };
 
@@ -197,19 +167,177 @@
                   <h1 className="text-3xl font-bold text-gray-900 mb-2">Billing & Revenue Tool</h1>
                   <p className="text-gray-600">Manage customers, billing codes, and calculate revenue</p>
                 </div>
-
                 <div className="bg-white rounded-lg shadow-sm mb-6">
                   <div className="border-b border-gray-200">
-                    <nav className="flex -mb-px">
-                      <button
-                        onClick={() => setActiveTab('customers')}
-                        className={`py-4 px-6 font-medium text-sm border-b-2 ${
-                          activeTab === 'customers'
-                            ? 'border-blue-500 text-blue-600'
-                            : 'border-transparent text-gray-500 hover:text-gray-700'
-                        }`}
-                      >
-                        Customers
-                      </button>
-                      <button
-                        onClick={() => setActiveTab('codes
+                    <nav className="flex -mb-px flex-wrap">
+                      {['customers', 'codes', 'pricing', 'revenue'].map(tab => (
+                        <button key={tab} onClick={() => setActiveTab(tab)}
+                          className={`py-4 px-6 font-medium text-sm border-b-2 capitalize ${
+                            activeTab === tab ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'
+                          }`}>{tab === 'codes' ? 'Billing Codes' : tab === 'pricing' ? 'Customer Pricing' : tab}</button>
+                      ))}
+                    </nav>
+                  </div>
+                  <div className="p-6">
+                    {activeTab === 'customers' && (
+                      <div>
+                        <h2 className="text-xl font-semibold mb-4">Customer Management</h2>
+                        <div className="flex gap-2 mb-6">
+                          <input type="text" value={newCustomerName} onChange={(e) => setNewCustomerName(e.target.value)}
+                            onKeyPress={(e) => e.key === 'Enter' && addCustomer()} placeholder="Customer name"
+                            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"/>
+                          <button onClick={addCustomer} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2">
+                            <Plus className="w-4 h-4"/> Add Customer
+                          </button>
+                        </div>
+                        <div className="space-y-2">
+                          {customers.map(customer => (
+                            <div key={customer.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                              <span className="font-medium">{customer.name}</span>
+                              <button onClick={() => deleteCustomer(customer.id)} className="text-red-600 hover:text-red-700">
+                                <Trash2 className="w-4 h-4"/>
+                              </button>
+                            </div>
+                          ))}
+                          {customers.length === 0 && <p className="text-gray-500 text-center py-8">No customers added yet</p>}
+                        </div>
+                      </div>
+                    )}
+                    {activeTab === 'codes' && (
+                      <div>
+                        <h2 className="text-xl font-semibold mb-4">Billing Codes</h2>
+                        <div className="mb-6">
+                          <label className="block mb-2">
+                            <span className="text-sm font-medium text-gray-700">Import Codes (CSV: code, description, default_price)</span>
+                            <input type="file" accept=".csv" onChange={importBillingCodes} className="hidden" id="import-codes"/>
+                            <label htmlFor="import-codes" className="mt-2 inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 cursor-pointer">
+                              <Upload className="w-4 h-4"/> Import Billing Codes
+                            </label>
+                          </label>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-2 mb-4">
+                          <input type="text" value={newCode.code} onChange={(e) => setNewCode({ ...newCode, code: e.target.value })}
+                            placeholder="Code" className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"/>
+                          <input type="text" value={newCode.description} onChange={(e) => setNewCode({ ...newCode, description: e.target.value })}
+                            placeholder="Description" className="md:col-span-2 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"/>
+                          <div className="flex gap-2">
+                            <input type="number" step="0.01" value={newCode.defaultPrice} onChange={(e) => setNewCode({ ...newCode, defaultPrice: e.target.value })}
+                              placeholder="Default Price (£)" className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"/>
+                            <button onClick={addBillingCode} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                              <Plus className="w-4 h-4"/>
+                            </button>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          {billingCodes.map(code => (
+                            <div key={code.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                              <div className="flex-1">
+                                <span className="font-bold text-blue-600 mr-3">{code.code}</span>
+                                <span className="text-gray-700">{code.description}</span>
+                              </div>
+                              <div className="flex items-center gap-4">
+                                <span className="text-gray-600">Default: £{code.defaultPrice.toFixed(2)}</span>
+                                <button onClick={() => deleteBillingCode(code.id)} className="text-red-600 hover:text-red-700">
+                                  <Trash2 className="w-4 h-4"/>
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                          {billingCodes.length === 0 && <p className="text-gray-500 text-center py-8">No billing codes added yet</p>}
+                        </div>
+                      </div>
+                    )}
+                    {activeTab === 'pricing' && (
+                      <div>
+                        <h2 className="text-xl font-semibold mb-4">Customer-Specific Pricing (GBP)</h2>
+                        {customers.length === 0 || billingCodes.length === 0 ? (
+                          <p className="text-gray-500 text-center py-8">Add customers and billing codes first</p>
+                        ) : (
+                          <div className="space-y-6">
+                            {customers.map(customer => (
+                              <div key={customer.id} className="border border-gray-200 rounded-lg p-4">
+                                <h3 className="font-semibold text-lg mb-4">{customer.name}</h3>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                                  {billingCodes.map(code => (
+                                    <div key={code.id} className="bg-gray-50 p-3 rounded">
+                                      <label className="block text-sm font-medium text-gray-700 mb-1">{code.code}</label>
+                                      <div className="flex items-center">
+                                        <span className="text-gray-500 mr-1">£</span>
+                                        <input type="number" step="0.01" value={customerPricing[customer.id]?.[code.code] || 0}
+                                          onChange={(e) => updateCustomerPrice(customer.id, code.code, e.target.value)}
+                                          className="w-full px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"/>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {activeTab === 'revenue' && (
+                      <div>
+                        <h2 className="text-xl font-semibold mb-4">Revenue Calculation</h2>
+                        <div className="mb-6">
+                          <label className="block mb-2">
+                            <span className="text-sm font-medium text-gray-700">Import Transactions (CSV: customer_name, code, quantity, date)</span>
+                            <input type="file" accept=".csv" onChange={importTransactions} className="hidden" id="import-transactions"/>
+                            <label htmlFor="import-transactions" className="mt-2 inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 cursor-pointer">
+                              <Upload className="w-4 h-4"/> Import Transactions
+                            </label>
+                          </label>
+                        </div>
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
+                          <div className="text-center">
+                            <p className="text-sm text-blue-600 font-medium mb-1">Total Revenue</p>
+                            <p className="text-4xl font-bold text-blue-900">£{totalRevenue.toFixed(2)}</p>
+                          </div>
+                        </div>
+                        {Object.entries(revenueData).map(([customerName, data]) => (
+                          <div key={customerName} className="mb-6 border border-gray-200 rounded-lg p-4">
+                            <div className="flex justify-between items-center mb-4">
+                              <h3 className="font-semibold text-lg">{customerName}</h3>
+                              <span className="text-xl font-bold text-green-600">£{data.total.toFixed(2)}</span>
+                            </div>
+                            <div className="overflow-x-auto">
+                              <table className="w-full text-sm">
+                                <thead className="bg-gray-50">
+                                  <tr>
+                                    <th className="text-left p-2">Date</th>
+                                    <th className="text-left p-2">Code</th>
+                                    <th className="text-right p-2">Quantity</th>
+                                    <th className="text-right p-2">Price (£)</th>
+                                    <th className="text-right p-2">Revenue (£)</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {data.details.map(transaction => (
+                                    <tr key={transaction.id} className="border-t border-gray-200">
+                                      <td className="p-2">{transaction.date}</td>
+                                      <td className="p-2 font-medium">{transaction.code}</td>
+                                      <td className="p-2 text-right">{transaction.quantity}</td>
+                                      <td className="p-2 text-right">{transaction.price.toFixed(2)}</td>
+                                      <td className="p-2 text-right font-semibold">{transaction.revenue.toFixed(2)}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        ))}
+                        {transactions.length === 0 && <p className="text-gray-500 text-center py-8">No transactions imported yet</p>}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<BillingTool />);
+    </script>
+</body>
+</html>
