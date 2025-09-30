@@ -20,16 +20,64 @@
           const [customerPricing, setCustomerPricing] = useState({});
           const [transactions, setTransactions] = useState([]);
           const [activeTab, setActiveTab] = useState('customers');
-          const [newCustomerName, setNewCustomerName] = useState('');
+          const [newCustomer, setNewCustomer] = useState({ accountNumber: '', name: '', product: '', status: 'Active' });
           const [newCode, setNewCode] = useState({ code: '', description: '', defaultPrice: '' });
 
           const addCustomer = () => {
-            if (newCustomerName.trim()) {
-              const newCustomer = { id: Date.now(), name: newCustomerName.trim() };
-              setCustomers([...customers, newCustomer]);
-              setCustomerPricing({ ...customerPricing, [newCustomer.id]: {} });
-              setNewCustomerName('');
+            if (newCustomer.accountNumber.trim() && newCustomer.name.trim()) {
+              const customer = { 
+                id: Date.now(), 
+                accountNumber: newCustomer.accountNumber.trim(),
+                name: newCustomer.name.trim(),
+                product: newCustomer.product.trim(),
+                status: newCustomer.status
+              };
+              setCustomers([...customers, customer]);
+              setCustomerPricing({ ...customerPricing, [customer.id]: {} });
+              setNewCustomer({ accountNumber: '', name: '', product: '', status: 'Active' });
             }
+          };
+
+          const importCustomers = (e) => {
+            const file = e.target.files[0];
+            if (file) {
+              const reader = new FileReader();
+              reader.onload = (event) => {
+                const text = event.target.result;
+                const lines = text.split('\n').filter(line => line.trim());
+                const newCustomers = [];
+                const startIndex = lines[0].toLowerCase().includes('account') ? 1 : 0;
+                for (let i = startIndex; i < lines.length; i++) {
+                  const [accountNumber, name, product, status] = lines[i].split(',').map(s => s.trim());
+                  if (accountNumber && name) {
+                    newCustomers.push({
+                      id: Date.now() + i,
+                      accountNumber: accountNumber,
+                      name: name,
+                      product: product || '',
+                      status: status || 'Active'
+                    });
+                  }
+                }
+                setCustomers([...customers, ...newCustomers]);
+                const updatedPricing = { ...customerPricing };
+                newCustomers.forEach(customer => {
+                  updatedPricing[customer.id] = {};
+                  billingCodes.forEach(code => {
+                    updatedPricing[customer.id][code.code] = code.defaultPrice;
+                  });
+                });
+                setCustomerPricing(updatedPricing);
+              };
+              reader.readAsText(file);
+            }
+            e.target.value = '';
+          };
+
+          const updateCustomerStatus = (customerId, newStatus) => {
+            setCustomers(customers.map(c => 
+              c.id === customerId ? { ...c, status: newStatus } : c
+            ));
           };
 
           const deleteCustomer = (customerId) => {
