@@ -43,31 +43,50 @@
             if (file) {
               const reader = new FileReader();
               reader.onload = (event) => {
-                const text = event.target.result;
-                const lines = text.split('\n').filter(line => line.trim());
-                const newCustomers = [];
-                const startIndex = lines[0].toLowerCase().includes('account') ? 1 : 0;
-                for (let i = startIndex; i < lines.length; i++) {
-                  const [accountNumber, name, product, status] = lines[i].split(',').map(s => s.trim());
-                  if (accountNumber && name) {
-                    newCustomers.push({
-                      id: Date.now() + i,
-                      accountNumber: accountNumber,
-                      name: name,
-                      product: product || '',
-                      status: status || 'Active'
-                    });
+                try {
+                  const text = event.target.result;
+                  const lines = text.split('\n').filter(line => line.trim());
+                  const newCustomers = [];
+                  const startIndex = lines[0].toLowerCase().includes('account') ? 1 : 0;
+                  
+                  for (let i = startIndex; i < lines.length; i++) {
+                    const parts = lines[i].split(',').map(s => s.trim());
+                    const accountNumber = parts[0];
+                    const name = parts[1];
+                    const product = parts[2] || '';
+                    const status = parts[3] || 'Active';
+                    
+                    if (accountNumber && name) {
+                      newCustomers.push({
+                        id: Date.now() + i,
+                        accountNumber: accountNumber,
+                        name: name,
+                        product: product,
+                        status: status
+                      });
+                    }
                   }
+                  
+                  if (newCustomers.length > 0) {
+                    setCustomers(prev => [...prev, ...newCustomers]);
+                    
+                    if (billingCodes.length > 0) {
+                      setCustomerPricing(prev => {
+                        const updated = { ...prev };
+                        newCustomers.forEach(customer => {
+                          updated[customer.id] = {};
+                          billingCodes.forEach(code => {
+                            updated[customer.id][code.code] = 0;
+                          });
+                        });
+                        return updated;
+                      });
+                    }
+                  }
+                } catch (error) {
+                  alert('Error importing customers. Please check your CSV format.');
+                  console.error(error);
                 }
-                setCustomers([...customers, ...newCustomers]);
-                const updatedPricing = { ...customerPricing };
-                newCustomers.forEach(customer => {
-                  updatedPricing[customer.id] = {};
-                  billingCodes.forEach(code => {
-                    updatedPricing[customer.id][code.code] = code.defaultPrice;
-                  });
-                });
-                setCustomerPricing(updatedPricing);
               };
               reader.readAsText(file);
             }
@@ -120,29 +139,48 @@
             if (file) {
               const reader = new FileReader();
               reader.onload = (event) => {
-                const text = event.target.result;
-                const lines = text.split('\n').filter(line => line.trim());
-                const newCodes = [];
-                const startIndex = lines[0].toLowerCase().includes('code') ? 1 : 0;
-                for (let i = startIndex; i < lines.length; i++) {
-                  const [code, description] = lines[i].split(',').map(s => s.trim());
-                  if (code) {
-                    newCodes.push({
-                      id: Date.now() + i,
-                      code: code.toUpperCase(),
-                      description: description || ''
-                    });
+                try {
+                  const text = event.target.result;
+                  const lines = text.split('\n').filter(line => line.trim());
+                  const newCodes = [];
+                  const startIndex = lines[0].toLowerCase().includes('code') ? 1 : 0;
+                  
+                  for (let i = startIndex; i < lines.length; i++) {
+                    const parts = lines[i].split(',').map(s => s.trim());
+                    const code = parts[0];
+                    const description = parts[1] || '';
+                    
+                    if (code && !billingCodes.find(c => c.code === code.toUpperCase())) {
+                      newCodes.push({
+                        id: Date.now() + i,
+                        code: code.toUpperCase(),
+                        description: description
+                      });
+                    }
                   }
+                  
+                  if (newCodes.length > 0) {
+                    setBillingCodes(prev => [...prev, ...newCodes]);
+                    
+                    if (customers.length > 0) {
+                      setCustomerPricing(prev => {
+                        const updated = { ...prev };
+                        customers.forEach(customer => {
+                          if (!updated[customer.id]) updated[customer.id] = {};
+                          newCodes.forEach(code => {
+                            if (!updated[customer.id][code.code]) {
+                              updated[customer.id][code.code] = 0;
+                            }
+                          });
+                        });
+                        return updated;
+                      });
+                    }
+                  }
+                } catch (error) {
+                  alert('Error importing billing codes. Please check your CSV format.');
+                  console.error(error);
                 }
-                setBillingCodes([...billingCodes, ...newCodes]);
-                const updatedPricing = { ...customerPricing };
-                customers.forEach(customer => {
-                  if (!updatedPricing[customer.id]) updatedPricing[customer.id] = {};
-                  newCodes.forEach(code => {
-                    updatedPricing[customer.id][code.code] = 0;
-                  });
-                });
-                setCustomerPricing(updatedPricing);
               };
               reader.readAsText(file);
             }
